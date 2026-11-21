@@ -2,9 +2,9 @@
 
 ## Demo
 
-The event timeline shows two scripted detections from the repository’s sample dashcam clip. The reviewer expanded the supporting frames and dismissed the phone-use alert. The reviewed report is available through **Export JSON report**.
+The event timeline shows a scripted fatigue event from the repository’s sample dashcam clip. The reviewer accepted the event after inspecting frames at 3 and 4 seconds, where the driver’s head dips. The reviewed report is available through **Export JSON report**.
 
-![Safety App event timeline showing timestamped evidence and a dismissed phone-use alert](docs/demo-review.jpg)
+![Safety App event timeline showing timestamped evidence and an accepted fatigue event](docs/demo-review.jpg)
 
 ## Run locally
 
