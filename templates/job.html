@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block title %}{{ job.filename }} · Safety App{% endblock %}
+{% block body %}
+<h1>{{ job.filename }}</h1>
+<section class="panel">
+  <h2>Analysis progress</h2>
+  <p id="status" role="status">{{ job.status | capitalize }} · {{ job.stage | capitalize }}</p>
+  {% if job.error %}<p>{{ job.error }}</p>{% endif %}
+  {% if job.frames %}
+  <p>{{ job.frames | selectattr('state', 'equalto', 'failed') | list | length }} failed samples · {{ job.frames | length }} total</p>
+  {% endif %}
+  <div class="actions">
+    {% if job.status in ('queued', 'running') %}
+    <form method="post" action="{{ url_for('cancel', job_id=job_id) }}"><button>Cancel job</button></form>
+    {% elif job.status in ('partial', 'failed', 'cancelled') %}
+    <form method="post" action="{{ url_for('retry', job_id=job_id) }}"><button>Retry unfinished work</button></form>
+    {% endif %}
+    {% if not active %}<a href="{{ url_for('export', job_id=job_id) }}">Export JSON report</a>{% endif %}
+  </div>
+</section>
+{% if not active and job.frames %}
+<section>
+  <h2>{{ 'Event timeline' if job.duration else 'Still image observations' }}</h2>
+  <p>{{ job.notice }}</p>
+  {% if job.duration %}
+  <p>Times are seconds from the start of the video.</p>
+  {% if job.events %}
+  <ol class="timeline" aria-label="Event positions in the video">
+    {% for event in job.events %}
+    <li><a href="#{{ event.id }}">{{ event.category | replace('_', ' ') | capitalize }} · {{ '%.2f' | format(event.start) }} s</a>
+      <div class="track" aria-hidden="true">
+        <span style="left: {{ 100 * event.start / job.duration }}%; width: {{ 100 * (event.end - event.start) / job.duration }}%"></span>
+      </div>
+    </li>
+    {% endfor %}
+  </ol>
+  {% endif %}
+  {% for event in job.events %}
+  <article id="{{ event.id }}" class="panel event">
+    <div class="event-heading">
+      <h3>{{ event.category | replace('_', ' ') | capitalize }}</h3>
+      <span>{{ '%.2f' | format(event.start) }}–{{ '%.2f' | format(event.end) }} s</span>
+      <span>{{ event.review | capitalize }}</span>
+    </div>
+    <details><summary>Evidence ({{ event.evidence | length }} frames)</summary>
+      <div class="evidence">
+      {% for frame in event.evidence %}
+        <figure><a href="{{ url_for('evidence', job_id=job_id, filename=frame.file) }}">
+          <img loading="lazy" src="{{ url_for('evidence', job_id=job_id, filename=frame.file) }}" alt="Evidence at {{ frame.seconds }} seconds">
+        </a><figcaption>{{ '%.2f' | format(frame.seconds) }} s</figcaption></figure>
+      {% endfor %}
+      </div>
+    </details>
+    <form method="post" class="actions" action="{{ url_for('review', job_id=job_id, event_id=event.id) }}">
+      <label>Review decision
+        <select name="decision">
+          {% for decision in decisions %}
+          <option value="{{ decision }}" {% if event.review == decision %}selected{% endif %}>{{ decision | capitalize }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <button>Save decision</button>
+    </form>
+  </article>
+  {% else %}<p>No events met the sampling rule.</p>{% endfor %}
+  {% else %}
+    {% set frame = job.frames[0] %}
+    {% if frame.state == 'done' %}
+    <img class="still" src="{{ url_for('evidence', job_id=job_id, filename=frame.file) }}" alt="Uploaded still image">
+    <p>{{ frame.summary }}</p>
+    <ul>{% for flag, value in frame.flags.items() if value %}<li>{{ flag | replace('_', ' ') }}</li>{% endfor %}</ul>
+    {% endif %}
+  {% endif %}
+</section>
+{% endif %}
+<script>
+const jobPath = {{ url_for('job_page', job_id=job_id) | tojson }};
+try {
+  const storage = JSON.parse(localStorage.getItem("safetyJobs") || "{}");
+  storage[jobPath] = {{ job.filename | tojson }};
+  localStorage.setItem("safetyJobs", JSON.stringify(storage));
+} catch {}
+{% if active %}
+async function poll() {
+  const label = document.querySelector("#status");
+  try {
+    const response = await fetch(jobPath + "/status");
+    if (!response.ok) throw new Error();
+    const status = await response.json();
+    if (!["queued", "running", "cancelling"].includes(status.status)) return location.reload();
+    label.textContent = status.status + " · " + status.stage +
+      (status.total ? " · " + status.processed + " / " + status.total + " samples attempted" : "");
+  } catch {
+    label.textContent = "Progress temporarily unavailable. Reconnecting…";
+  }
+  setTimeout(poll, 1000);
+}
+poll();
+{% endif %}
+</script>
+{% endblock %}
