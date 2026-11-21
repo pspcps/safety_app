@@ -1,5 +1,13 @@
 # Safety App video-event review workbench
 
+## Demo
+
+The event timeline shows two scripted detections from the repository’s sample dashcam clip. The reviewer expanded the supporting frames and dismissed the phone-use alert. The reviewed report is available through **Export JSON report**.
+
+![Safety App event timeline showing timestamped evidence and a dismissed phone-use alert](docs/demo-review.jpg)
+
+## Run locally
+
 Run on a trusted local machine with Python 3.10+, FFmpeg, FFprobe and Ollama.
 
 ```sh
