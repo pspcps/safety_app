@@ -1,133 +1,32 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <title>Safety Analyzer</title>
-  <link rel="stylesheet"
-        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
-  <style>
-    .loading-overlay {
-      display: none;
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0, 0, 0, 0.5);
-      z-index: 9999;
-    }
-    .loading-content {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: white;
-      padding: 2rem;
-      border-radius: 10px;
-      text-align: center;
-      min-width: 300px;
-    }
-    .spinner-border {
-      width: 3rem;
-      height: 3rem;
-    }
-    .progress-bar {
-      animation: progressAnimation 3s ease-in-out infinite;
-    }
-    @keyframes progressAnimation {
-      0% { width: 0%; }
-      50% { width: 70%; }
-      100% { width: 90%; }
-    }
-  </style>
-</head>
-<body class="bg-light">
-<div class="container py-5">
-  <h1 class="mb-4 text-center">Safety Analyzer</h1>
-
-  {% if error %}
-    <div class="alert alert-danger">{{ error }}</div>
-  {% endif %}
-
-  <div class="card shadow-sm p-4">
-    <form method="POST" enctype="multipart/form-data" id="analyzeForm">
-      <div class="mb-3">
-        <label class="form-label">Upload Image or Video</label>
-        <input type="file" class="form-control" name="file" required id="fileInput" 
-               accept="image/*,video/*">
-      </div>
-      <div class="mb-3">
-        <label class="form-label">Category</label>
-        <select class="form-select" name="category" required>
-          <option value="in_cabin">In-cabin (Driver)</option>
-          <option value="road">Road-facing</option>
-        </select>
-      </div>
-      <div class="mb-3">
-        <label class="form-label">Frames per second (for video)</label>
-        <input type="number" class="form-control" name="fps" value="1">
-      </div>
-      <button type="submit" class="btn btn-primary w-100" id="analyzeBtn">
-        <span id="btnText">Analyze</span>
-        <span id="btnSpinner" class="spinner-border spinner-border-sm ms-2" style="display: none;"></span>
-      </button>
-    </form>
-  </div>
-</div>
-
-<!-- Loading Overlay -->
-<div class="loading-overlay" id="loadingOverlay">
-  <div class="loading-content">
-    <div class="spinner-border text-primary mb-3"></div>
-    <h4>Analyzing Your Media...</h4>
-    <p class="text-muted mb-3">This may take a few moments depending on file size and complexity.</p>
-    <div class="progress mb-3">
-      <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar"></div>
-    </div>
-    <small class="text-muted">Please don't close this window or navigate away.</small>
-  </div>
-</div>
-
+{% extends "base.html" %}
+{% block body %}
+<h1>Analyze media</h1>
+<form method="post" enctype="multipart/form-data" class="panel upload">
+  <label>Video or still image <input name="file" type="file" accept=".mp4,.mov,.webm,.mkv,.png,.jpg,.jpeg" required></label>
+  <small>{{ formats }} · 100 MiB · 120 seconds · up to 240 samples</small>
+  <label>Camera view
+    <select name="category"><option value="in_cabin">In-cabin</option><option value="road">Road-facing</option></select>
+  </label>
+  <label>Samples per second <input type="number" name="fps" value="1" min="1" max="{{ max_fps }}" required></label>
+  <button>Queue analysis</button>
+</form>
+<section id="recent" hidden>
+  <h2>Recent jobs in this browser</h2>
+  <ul id="jobs"></ul>
+</section>
 <script>
-document.getElementById('analyzeForm').addEventListener('submit', function(e) {
-  const submitBtn = document.getElementById('analyzeBtn');
-  const btnText = document.getElementById('btnText');
-  const btnSpinner = document.getElementById('btnSpinner');
-  const loadingOverlay = document.getElementById('loadingOverlay');
-  const fileInput = document.getElementById('fileInput');
-  
-  // Check if file is selected - if not, let browser validation handle it
-  if (!fileInput.files || fileInput.files.length === 0) {
-    // Don't prevent default - let browser validation show the error
-    return;
+try {
+  const storage = JSON.parse(localStorage.getItem("safetyJobs") || "{}");
+  for (const [path, name] of Object.entries(storage).reverse()) {
+    if (!/^\/jobs\/[0-9a-f-]{36}$/.test(path)) continue;
+    const item = document.createElement("li");
+    const link = document.createElement("a");
+    link.href = path;
+    link.textContent = name;
+    item.append(link);
+    document.querySelector("#jobs").append(item);
+    document.querySelector("#recent").hidden = false;
   }
-  
-  // File is selected, proceed with loading state
-  // Show loading state immediately but don't disable inputs
-  btnText.textContent = 'Analyzing...';
-  btnSpinner.style.display = 'inline-block';
-  submitBtn.disabled = true;
-  
-  // Show loading overlay after a short delay to ensure form submits first
-  setTimeout(function() {
-    loadingOverlay.style.display = 'block';
-  }, 100);
-});
-
-// Re-enable form if user navigates back
-window.addEventListener('pageshow', function(event) {
-  if (event.persisted) {
-    // Reset form state
-    const submitBtn = document.getElementById('analyzeBtn');
-    const btnText = document.getElementById('btnText');
-    const btnSpinner = document.getElementById('btnSpinner');
-    const loadingOverlay = document.getElementById('loadingOverlay');
-    
-    btnText.textContent = 'Analyze';
-    btnSpinner.style.display = 'none';
-    submitBtn.disabled = false;
-    loadingOverlay.style.display = 'none';
-  }
-});
+} catch {}
 </script>
-</body>
-</html>
+{% endblock %}
