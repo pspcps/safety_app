@@ -4,7 +4,7 @@
 
 The event timeline shows a scripted fatigue event from the repository’s sample dashcam clip. The reviewer accepted the event after inspecting frames at 3 and 4 seconds, where the driver’s head dips. The reviewed report is available through **Export JSON report**.
 
-![Safety App event timeline showing timestamped evidence and an accepted fatigue event](docs/demo-review.jpg)
+![Safety App event timeline showing timestamped evidence and an accepted fatigue event](docs/demo-driver-fatigue.jpg)
 
 ## Run locally
 
